@@ -1,0 +1,91 @@
+#!/bin/bash
+
+help_message="\n
+NAME:\n
+\tvctlwn - Alsa Volume Control With Notiсе\n
+OPTIONS:\n
+\t-h, --help: Help.\n
+\t-m, --mixer: Mixer name. Default \"Master\".\n
+\t-v, --value: Value for change level in percents. Only positive numbers. Example: 0, 5, 10. Default: 0.\n
+\t-i, --increment: Increment sound level on value (-v). Default.\n
+\t-d, --decrement: Decrement sound level on value (-v).\n
+\t-s, --state: Set mixer state. Possible values: mute, unmute, toggle. Default: unmute.\n
+EXAMPLE:\n
+\tvctlwn -m Master -v 5 -i -s unmute\n"
+
+i=0
+sign="+"
+value=0
+mixer=Master
+state="unmute"
+
+skip_arg="0"
+number_expression='^[0-9]+$'
+error="0"
+
+
+for var in $@; do
+    # Current argument number
+    (( i++ ))
+    if [ $skip_arg = "1" ]; then
+        skip_arg="0"
+        continue
+    fi
+    case $var in
+        -h | --help)
+            echo -e $help_message
+            exit 0
+            break
+            ;;
+        -m | --mixer)
+            let "next_arg = $i + 1"
+            mixer="${!next_arg}"
+            skip_arg="1"
+            ;;
+        -v | --value)
+            let "next_arg = $i + 1"
+            value="${!next_arg}"
+            if [[ $value =~ $number_expression ]]; then
+                skip_arg="1"
+            else
+                error="1"
+                echo "Invalid value. Value must be integer number!"
+                break
+            fi
+            ;;
+        -i | --increment)
+            sign="+"
+            ;;
+        -d | --decrement)
+            sign="-"
+            ;;
+        -s | --state)
+            let "next_arg = $i + 1"
+            state="${!next_arg}"
+            skip_arg="1"
+            case $state in
+                mute | unmute | toggle)
+                    ;;
+                *)
+                    echo "Invaled state. Possible values of state: mute, unmute, toggle"
+                    error="1"
+                    break
+                    ;;
+                esac
+            ;;
+        *)
+            echo "Invalid argument!"
+            error="1"
+            break
+            ;;
+    esac
+done
+
+if [ $error = "0" ]; then
+    
+    eval "amixer -q set $mixer $value%$sign $state"
+    notify_value="Volume [`amixer sget $mixer | grep Playback | tail -n 1 | cut -d'[' -f4 | cut -d']' -f1`]: `amixer sget $mixer | grep "Playback" | tail -n 1 | cut -d'[' -f2 | cut -d']' -f1`"
+    exec notify-send "$notify_value"
+else
+    exit 1
+fi
