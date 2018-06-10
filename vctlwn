@@ -4,12 +4,13 @@ help_message="\n
 NAME:\n
 \tvctlwn - Alsa Volume Control With Notiсе\n
 OPTIONS:\n
-\t-h, --help: Help.\n
+\t-?, -h, --help: Help.\n
 \t-m, --mixer: Mixer name. Default \"Master\".\n
 \t-v, --value: Value for change level in percents. Only positive numbers. Example: 0, 5, 10. Default: 0.\n
 \t-i, --increment: Increment sound level on value (-v). Default.\n
 \t-d, --decrement: Decrement sound level on value (-v).\n
 \t-s, --state: Set mixer state. Possible values: mute, unmute, toggle. Default: unmute.\n
+\t-t, --expire-time: Timeout in milliseconds at which to expire the notification. Default: 1000\n
 EXAMPLE:\n
 \tvctlwn -m Master -v 5 -i -s unmute\n"
 
@@ -18,9 +19,11 @@ sign="+"
 value=0
 mixer=Master
 state="unmute"
+expire_time="1000"
 
 skip_arg="0"
-number_expression='^[0-9]+(\.[0-9]+)?$'
+double_expression='^[0-9]+(\.[0-9]+)?$'
+integer_expression='^[0-9]+$'
 
 
 for var in $@; do
@@ -31,7 +34,7 @@ for var in $@; do
         continue
     fi
     case $var in
-        -h | --help)
+        -? | -h | --help)
             echo -e $help_message
             exit 0
             break
@@ -44,7 +47,7 @@ for var in $@; do
         -v | --value)
             let "next_arg = $i + 1"
             value="${!next_arg}"
-            if [[ $value =~ $number_expression ]]; then
+            if [[ $value =~ $double_expression ]]; then
                 skip_arg="1"
             else
                 echo "Invalid value. Value must be number as double or integer!"
@@ -77,6 +80,23 @@ for var in $@; do
                     ;;
                 esac
             ;;
+        -t | --expire-time) 
+            let "next_arg = $i + 1"
+            expire_time="${!next_arg}"
+            skip_arg="1"
+            if [[ $expire_time =~ $integer_expression ]]; then
+                if [[ "$expire_time" -lt "0" ]]; then
+                    echo "Error!. Expire time must be greater than zero."
+                    exit 1
+                    break
+                fi
+            else
+                echo "Error!. Expire time must be integer value."
+                exit 1
+                break
+            fi
+            ;;
+            
         *)
             echo "Invalid argument!"
             exit 1
@@ -88,4 +108,4 @@ done
 
 eval "amixer -q set $mixer $value%$sign $state"
 notify_value="Volume [`amixer sget $mixer | grep Playback | tail -n 1 | cut -d'[' -f4 | cut -d']' -f1`]: `amixer sget $mixer | grep "Playback" | tail -n 1 | cut -d'[' -f2 | cut -d']' -f1`"
-exec notify-send "$notify_value"
+exec notify-send "$notify_value" -t $expire_time
