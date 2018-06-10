@@ -20,8 +20,7 @@ mixer=Master
 state="unmute"
 
 skip_arg="0"
-number_expression='^[0-9]+$'
-error="0"
+number_expression='^[0-9]+(\.[0-9]+)?$'
 
 
 for var in $@; do
@@ -48,8 +47,13 @@ for var in $@; do
             if [[ $value =~ $number_expression ]]; then
                 skip_arg="1"
             else
-                error="1"
-                echo "Invalid value. Value must be integer number!"
+                echo "Invalid value. Value must be number as double or integer!"
+                exit 1
+                break
+            fi
+            if [[ "$value" -gt "100" || "$value" -lt "0" ]]; then
+                echo "Invalid value. Value must be in range [0..100]"
+                exit 1
                 break
             fi
             ;;
@@ -68,24 +72,20 @@ for var in $@; do
                     ;;
                 *)
                     echo "Invaled state. Possible values of state: mute, unmute, toggle"
-                    error="1"
+                    exit 1
                     break
                     ;;
                 esac
             ;;
         *)
             echo "Invalid argument!"
-            error="1"
+            exit 1
             break
             ;;
     esac
 done
 
-if [ $error = "0" ]; then
-    
-    eval "amixer -q set $mixer $value%$sign $state"
-    notify_value="Volume [`amixer sget $mixer | grep Playback | tail -n 1 | cut -d'[' -f4 | cut -d']' -f1`]: `amixer sget $mixer | grep "Playback" | tail -n 1 | cut -d'[' -f2 | cut -d']' -f1`"
-    exec notify-send "$notify_value"
-else
-    exit 1
-fi
+
+eval "amixer -q set $mixer $value%$sign $state"
+notify_value="Volume [`amixer sget $mixer | grep Playback | tail -n 1 | cut -d'[' -f4 | cut -d']' -f1`]: `amixer sget $mixer | grep "Playback" | tail -n 1 | cut -d'[' -f2 | cut -d']' -f1`"
+exec notify-send "$notify_value"
