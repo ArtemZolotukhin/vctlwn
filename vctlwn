@@ -4,7 +4,7 @@ help_message="\n
 NAME:\n
 \tvctlwn - Alsa Volume Control With Notiсе\n
 OPTIONS:\n
-\t-?, -h, --help: Help.\n
+\t-h, --help: Help.\n
 \t-m, --mixer: Mixer name. Default \"Master\".\n
 \t-v, --value: Value for change level in percents. Only positive numbers. Example: 0, 5, 10. Default: 0.\n
 \t-i, --increment: Increment sound level on value (-v). Default.\n
@@ -34,7 +34,7 @@ for var in $@; do
         continue
     fi
     case $var in
-        -? | -h | --help)
+        -h | --help)
             echo -e $help_message
             exit 0
             break
